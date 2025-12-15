@@ -6,3 +6,5 @@
 - Start Server
 - Implement basic middlewares
 
+- Connect to DB
+
