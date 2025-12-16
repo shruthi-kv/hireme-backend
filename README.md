@@ -7,4 +7,8 @@
 - Implement basic middlewares
 
 - Connect to DB
+- create model
+    - mongoose.connect('<connection-string>')
+    - new mongoose.Schema({})
+    - mongoose.model('<schemaName>',<schema-object>)
 
