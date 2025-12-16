@@ -2,8 +2,8 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import dotenv from 'dotenv';
-import connectDB from './utils/db.js'
+import dotenv from "dotenv";
+import connectDB from "./utils/db.js";
 
 dotenv.config({});
 
@@ -30,11 +30,12 @@ app.use(
 
 // listen to the server
 
-connectDB().then(()=>{
-  app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
-}).catch((err)=>{
-  console.log('error',err)
-})
-
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server listening on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.log("error", err);
+  });
