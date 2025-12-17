@@ -12,3 +12,6 @@
     - new mongoose.Schema({})
     - mongoose.model('<schemaName>',<schema-object>)
 
+- create controllers
+    - user for Login, Register
+
