@@ -101,3 +101,71 @@ export const Login = async (req, res) => {
     console.log(err);
   }
 };
+
+export const Logout = (req, res) => {
+  try {
+    return res.status(200).cookie("token", { maxAge: 0 }).json({
+      message: "Logged out successfully",
+      success: true,
+    });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const updatePorfile = async(req, res) => {
+  try {
+    const { firstName, email, bio, skills, phoneNumber } = req.body;
+    const file = req.file;
+
+    if (!firstName || !email || !skills || !bio || !phoneNumber) {
+      return res.status(400).json({
+        message: "Something is missing !",
+        success: false,
+      });
+    }
+    const skillsArray = skills.split(',');
+
+    const userId = req.id; //middlware authentication
+    let user = await User.findById(userId);
+
+    if(!user){
+      res.status(400).json({
+        message:'User not found',
+        success:false
+      })
+    }
+
+    //updating the data;
+    user.fullName = fullName;
+    user.email = email;
+    user.phoneNumber = phoneNumber;
+    user.profile.bio = bio;
+    user.profile.skills = skillsArray,
+   
+    //resume comes later here
+
+
+    await user.save();
+
+     user = {
+      id: user._id,
+      firstName: user.firstName,
+      email: user.email,
+      role: user.role,
+      phoneNumber: user.phoneNumber,
+      profile: user.profile,
+    };
+
+    return res.status(200).json({
+      message:'Profile updated successfully',
+      success:true,
+      user
+    })
+
+
+
+  } catch (err) {
+    console.log(err);
+  }
+};
