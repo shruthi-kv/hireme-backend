@@ -2,82 +2,114 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-export const Register = async (req, res) => {
+export const register = async (req, res) => {
   try {
     const { firstName, email, password, role, phoneNumber } = req.body;
 
+    // 1. Validate input
     if (!firstName || !email || !password || !role || !phoneNumber) {
       return res.status(400).json({
-        message: "Something is missing !",
         success: false,
+        message: "All fields are required",
       });
     }
 
-    const user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({
-        message: "User already exists",
+    // 2. Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 3. Check if user already exists
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({
         success: false,
+        message: "User already exists with this email",
       });
     }
 
+    // 4. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({
+    // 5. Create user
+    const user = await User.create({
       firstName,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       role,
       phoneNumber,
     });
 
-    return res.status(200).json({
-      message: "Account created successfully!",
+    // 6. Prepare response (DTO)
+    const userResponse = {
+      id: user._id,
+      firstName: user.firstName,
+      email: user.email,
+      role: user.role,
+      phoneNumber: user.phoneNumber,
+    };
+
+    return res.status(201).json({
       success: true,
+      message: "Account created successfully",
+      user: userResponse,
     });
-  } catch (err) {
-    console.log(err);
+
+  } catch (error) {
+    console.error("Register Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 
-export const Login = async (req, res) => {
+
+export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
+    // 1. Validate input
     if (!email || !password || !role) {
       return res.status(400).json({
-        message: "Something is missing",
         success: false,
+        message: "Email, password and role are required",
       });
     }
 
-    let user = await User.findOne({ email });
+    // 2. Find user
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({
-        message: "Incorrect credentials",
+      return res.status(401).json({
         success: false,
+        message: "Invalid email or password",
       });
     }
 
-    const isPasswordMatched = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatched) {
-      return res.status(400).json({
-        message: "Incorrect credentials",
+    // 3. Validate password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
         success: false,
+        message: "Invalid email or password",
       });
     }
 
-    if (role !== user.role) {
-      return res.status(400).json({
-        message: "Account does not exists with this role",
+    // 4. Validate role
+    if (user.role !== role) {
+      return res.status(403).json({
         success: false,
+        message: "Unauthorized role access",
       });
     }
-    const token = await jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
-      expiresIn: "1d",
-    });
 
-    user = {
+    // 5. Generate token
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.SECRET_KEY,
+      { expiresIn: "1d" }
+    );
+
+    // 6. Sanitize user response
+    const userResponse = {
       id: user._id,
       firstName: user.firstName,
       email: user.email,
@@ -85,31 +117,52 @@ export const Login = async (req, res) => {
       phoneNumber: user.phoneNumber,
       profile: user.profile,
     };
+
+    // 7. Send response with secure cookie
     return res
       .status(200)
       .cookie("token", token, {
-        maxAge: 1 * 24 * 60 * 60 * 1000,
         httpOnly: true,
         sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 24 * 60 * 60 * 1000,
       })
       .json({
-        message: `Welcome back ${user.firstName}`,
-        user,
         success: true,
+        message: `Welcome back, ${user.firstName}`,
+        user: userResponse,
       });
-  } catch (err) {
-    console.log(err);
+
+  } catch (error) {
+    console.error("Login Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 
-export const Logout = (req, res) => {
+
+export const logout = (req, res) => {
   try {
-    return res.status(200).cookie("token", { maxAge: 0 }).json({
-      message: "Logged out successfully",
-      success: true,
+    return res
+      .status(200)
+      .cookie("token", "", {
+        httpOnly: true,
+        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
+        expires: new Date(0), // immediately expire
+      })
+      .json({
+        success: true,
+        message: "Logged out successfully",
+      });
+  } catch (error) {
+    console.error("Logout Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
-  } catch (err) {
-    console.log(err);
   }
 };
 
